@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>My Experiment</title>
+    <script src="dist/jspsych.js"></script>
+    <script src="dist/plugin-image-keyboard-response.js"></script>
+    <script src="dist/plugin-html-button-response.js"></script>
+    <script src="dist/plugin-html-keyboard-response.js"></script>
+    <script src="dist/plugin-survey.js"></script>
+    <script src="dist/plugin-preload.js"></script>
+    <script src="dist/plugin-fullscreen.js"></script>
+    <script src="dist/plugin-virtual-chinrest.js"></script>
+    <link rel="stylesheet" href="dist/jspsych.css">
+    <link rel="stylesheet" href="dist/plugin-survey.css">
+
+    <style>
+        .p-grid1 {
+            text-align: left;
+            line-height:40px;
+            font-size: 25px;
+            margin-left: 200px;
+            margin-right: 200px
+        }
+        .p-grid2 {
+            line-height: 0px;
+            font-size: 25px;
+            margin-left: 15px;
+            margin-right: 15px
+        }
+        .button{
+            position:absolute; left: -400px; top:-230px;
+            border-radius: 4px;  background-color: #ffffff;  border: solid; border-width:1px;  color: #b3b0b0;  text-align: center;  font-size: 20px;  padding: 10px;  width: 150px;  transition: all 0.5s;  cursor: pointer; 
+        }
+
+    </style>
+
+</head>
+
+<body>
+</body>
+<script>
+
+    function save_data(){
+        var progress = jsPsych.getProgress().percent_complete;
+        var pay = progress/100*40;
+        var message = '实验结束。您一共完成了'+progress+'%的实验,您将获得实验报酬'+pay.toFixed(2)+'元';
+        jsPsych.endExperiment(message);
+        var date = new Date().toLocaleDateString()+'_'+new Date().toLocaleTimeString();
+        var subname = JSON.parse(jsPsych.data.get().json())[2]['response']['name'];
+        jsPsych.data.get().localSave('json', date + '_' +subname + '.json');
+    };
+
+    /* initialize jsPsych */
+    var jsPsych = initJsPsych({
+        show_progress_bar: true,
+        auto_update_progress_bar: false,
+        message_progress_bar:'实验进度',
+        on_finish: save_data,
+    });
+    jsPsych.pluginAPI.cancelAllKeyboardResponses()
+
+    /* create timeline */
+    var timeline = [];
+
+    /*virtual chinrest*/
+    var correct_deg = {
+        type: jsPsychVirtualChinrest,
+         blindspot_reps: 3,
+        resize_units: "deg",
+        pixels_per_unit: 50,
+    };
+    timeline.push(correct_deg);
+
+    // all images are used in standard trials that can be automatically preloaded (as well as being used in trials 
+    // that use timeline variables), so we can preload all image files with the auto_preload option
+    timeline.push({
+        type: jsPsychPreload,
+        auto_preload: true
+    });
+
+    var info = {
+        type: jsPsychSurvey,
+        pages: [
+            [
+                { type: 'text', prompt: '姓名', name: 'name', required: true },
+                { type: 'multi-choice', prompt: '性别', columns: 5, options: ['男', '女'], required: true },
+                { type: 'text', prompt: '年龄', required: true },
+            ]
+        ],
+        button_label_finish: '确定',
+        show_question_numbers: 'on',
+        required_error_text: "请填写问题",
+        on_start: function(){jsPsych.setProgressBar(0)},
+    };
+    timeline.push(info);
+
+    /* define instructions trial */
+    var instructions = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+        <p class="p-grid1">欢迎参加上海交通大学北京大学联合课题组开展的视觉认知实验！</p>
+        <p class="p-grid1"><b>实验任务：</b>实验开始后，屏幕上会出现被遮挡的一张图片，你需要选择这张图片呈现的动物名称。本实验包括5类动物，猫/狗/仓鼠/鸟/猩猩。下面是一些这五种动物的例子，但是不包括实验中将要呈现的图片。(插入一些图片的例子)因为每张图片都有不同程度的遮挡，有些图片会很难识别，但是没关系，请选择你“感觉”像的东西。</p>
+        <p class="p-grid1"><b>实验报酬：</b>本实验您需要完成<b>800</b>个试次，实验结束后，您将获得<b>40</b>元被试费。如果您无法一次性完成整个实验，也可以随时选择退出实验，我们将根据您已完成试次数量按比例给您提供被试费。</p>
+        <p class="p-grid1">如果准备好了，请点击“开始实验”！</p>
+        `,
+        choices: ['<p class="p-grid2">开 始 实 验</p>'],
+        margin_vertical: '20px',
+        on_start: function(){jsPsych.setProgressBar(0)},
+
+    };
+    timeline.push(instructions);
+
+    /* define trial stimuli array for timeline variables */
+    var stimuli = new Array();
+    var orders = [1, 3, 11, 20, 22];
+    var conditions = ['S', 'S∪{i,j}', 'S∪{i}', 'S∪{j}'];
+    var count = 0;
+    for (var i = 1; i < 21; i++) {
+        for (var c = 1; c < 3; c++) {
+            for (var o = 0; o < 5; o++) {
+                for (var j = 0; j < 4; j++, count++) {
+                    //stimuli[count]={stimulus:'pic/img'+i+'/ij1/context'+c+'/order'+orders[o]+'/'+conditions[j]+'.png',img:i}
+                    stimuli[count] = {
+                        stimulus: 'pic/img' + i + '/ij1/context' + c + '/order' + orders[o] + '/' + conditions[j] + '.png', img: i,
+                        data: { task: 'choose', img: i, context: c, order: orders[o], condition: conditions[j] }
+                    }
+                }
+            }
+        }
+    };
+    var test_stimuli = jsPsych.randomization.shuffleNoRepeats(stimuli, function (a, b) { return a.img === b.img });
+
+    /* define fixation and test trials */
+    var fixation_0 = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<p style="font-size:60px">请 看 图 片</p>`,
+        trial_duration: 800,
+        choices: "NO_KEYS",
+        data: { task: 'fixation' },
+        on_start: function(){jsPsych.setProgressBar(jsPsych.getProgressBarCompleted())},
+
+    };
+    var fixation_1 = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<p style="font-size:80px">3</p>`,
+        trial_duration: 500,
+        choices: "NO_KEYS",
+        data: { task: 'fixation' },
+        on_start: function(){jsPsych.setProgressBar(jsPsych.getProgressBarCompleted())},
+
+    };
+    var fixation_2 = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<p style="font-size:80px">2</p>`,
+        trial_duration: 500,
+        choices: "NO_KEYS",
+        data: { task: 'fixation' },
+        on_start: function(){jsPsych.setProgressBar(jsPsych.getProgressBarCompleted())},
+
+    };
+    var fixation_3 = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<p style="font-size:80px">1</p>`,
+        trial_duration: 500,
+        choices: "NO_KEYS",
+        data: { task: 'fixation' },
+        on_start: function(){jsPsych.setProgressBar(jsPsych.getProgressBarCompleted())},
+    };
+
+    var stim = {
+        type: jsPsychImageKeyboardResponse,
+        stimulus: jsPsych.timelineVariable('stimulus'),
+        stimulus_width: '500px',
+        maintain_aspect_ratio: true,
+        trial_duration: 300,
+        choices: 'NO_KEYS',
+        render_on_canvas: false,
+        data: { task: 'stimulus' },
+        on_start: function(){jsPsych.setProgressBar(jsPsych.getProgressBarCompleted())},
+
+    };
+
+    var choose = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `<p style="font-size:28px; margin-bottom:50px">图片中的动物是： </p>
+        <div ><button class="button" onclick="save_data()">«不想继续了</button></div>`,
+        choices: ['<p  class="p-grid2">狗<br></p>', '<p  class="p-grid2">猫<br></p>', '<p  class="p-grid2">熊<br></p>', '<p  class="p-grid2">仓鼠<br></p>', '<p  class="p-grid2">猩猩<br></p>'],
+        data: jsPsych.timelineVariable('data'),
+        on_finish: function(){
+            jsPsych.setProgressBar(jsPsych.getProgressBarCompleted()+1/test_stimuli.length);
+        },
+    };
+
+    /* define test procedure */
+    var test_procedure = {
+        timeline: [fixation_0, fixation_1, fixation_2, fixation_3, stim, choose],
+        timeline_variables: test_stimuli,
+        randomize_order: false
+    };
+    timeline.push(test_procedure);
+
+    /* start the experiment */
+    jsPsych.run(timeline);
+
+</script>
+
+</html>
