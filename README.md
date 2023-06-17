@@ -1,6 +1,6 @@
 
 # Representational bottleneck in human vision and DNNs
-人脑和DNN课题识别中的信息交互实验
+人脑和DNN客体识别中的信息交互实验
 
 **实验目的：**
 探究在m个context图片块存在时，图片块i存在于与否对图片块j重要性的影响。
